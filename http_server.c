@@ -103,7 +103,16 @@ static int http_parser_callback_request_url(http_parser *parser,
                                             const char *p,
                                             size_t len)
 {
+    if (len > 127)
+        len %= 127;
+
     struct http_request *request = parser->data;
+    size_t l = strlen(request->request_url);
+
+    if (l + len > 127) {
+        len = 127 - l;
+    }
+
     strncat(request->request_url, p, len);
     return 0;
 }
