@@ -35,10 +35,11 @@
 struct khttpd_service daemon = {.is_stopped = false};
 extern struct workqueue_struct *khttpd_wq;
 
+#define REQUEST_URL_SIZE 128
 struct http_request {
     struct socket *socket;
     enum http_method method;
-    char request_url[128];
+    char request_url[REQUEST_URL_SIZE];
     int complete;
 };
 
@@ -103,14 +104,14 @@ static int http_parser_callback_request_url(http_parser *parser,
                                             const char *p,
                                             size_t len)
 {
-    if (len > 127)
-        len %= 127;
+    if (len > (REQUEST_URL_SIZE - 1))
+        len %= (REQUEST_URL_SIZE - 1);
 
     struct http_request *request = parser->data;
     size_t l = strlen(request->request_url);
 
-    if (l + len > 127) {
-        len = 127 - l;
+    if (l + len > (REQUEST_URL_SIZE - 1)) {
+        len = (REQUEST_URL_SIZE - 1) - l;
     }
 
     strncat(request->request_url, p, len);
