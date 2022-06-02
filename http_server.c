@@ -1,5 +1,6 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/fs.h>
 #include <linux/kthread.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
@@ -14,32 +15,53 @@
     "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
     "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
     "Connection: Close" CRLF CRLF "Hello World!" CRLF
+
 #define HTTP_RESPONSE_200_KEEPALIVE_DUMMY                     \
     ""                                                        \
     "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
     "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
     "Connection: Keep-Alive" CRLF CRLF "Hello World!" CRLF
+
 #define HTTP_RESPONSE_501                                              \
     ""                                                                 \
     "HTTP/1.1 501 Not Implemented" CRLF "Server: " KBUILD_MODNAME CRLF \
     "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF          \
     "Connection: Close" CRLF CRLF "501 Not Implemented" CRLF
+
 #define HTTP_RESPONSE_501_KEEPALIVE                                    \
     ""                                                                 \
     "HTTP/1.1 501 Not Implemented" CRLF "Server: " KBUILD_MODNAME CRLF \
     "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF          \
     "Connection: KeepAlive" CRLF CRLF "501 Not Implemented" CRLF
 
+/* Send Message */
+#define HTTP_SEND_MESSAGE_DUMMY(s)                            \
+    ""                                                        \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
+    "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
+    "Connection: Close" CRLF CRLF #s CRLF
+
+/* for HTTP 1.1 */
+#define HTTP_SEND_MESSAGE_KEEPALIVE_DUMMY(s)                  \
+    ""                                                        \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
+    "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
+    "Connection: Keep-Alive" CRLF CRLF #s CRLF
+
 #define RECV_BUFFER_SIZE 4096
+#define SEND_BUFFER_SIZE 256
+#define REQUEST_URL_SIZE 128
+
+#define DIR_PATH "/home/khienh/linux_kernel/khttpd/"
 
 struct khttpd_service daemon = {.is_stopped = false};
 extern struct workqueue_struct *khttpd_wq;
 
-#define REQUEST_URL_SIZE 128
 struct http_request {
     struct socket *socket;
     enum http_method method;
     char request_url[REQUEST_URL_SIZE];
+    struct dir_context directory;
     int complete;
 };
 
@@ -77,17 +99,48 @@ static int http_server_send(struct socket *sock, const char *buf, size_t size)
     return done;
 }
 
+static int directory_traversal(struct dir_context *ctx,
+                               const char *name,
+                               int namelen,
+                               loff_t offset,
+                               u64 ino,
+                               unsigned int d_type)
+{
+    // char buf[SEND_BUFFER_SIZE];
+    // struct http_request *request = container_of(ctx, struct http_request,
+    // dir_context);
+
+    // char *url = strcmp(request->request_url, "/")
+
+
+    return 0;
+}
+
+static void directory_listing(struct http_request *request)
+{
+    struct file *dir = filp_open(DIR_PATH, O_DIRECTORY, 0);
+    request->directory.actor = directory_traversal;
+    iterate_dir(dir, &request->directory);
+    char *response = HTTP_SEND_MESSAGE_DUMMY(AAAAA);
+    http_server_send(request->socket, response, strlen(response));
+}
+
 static int http_server_response(struct http_request *request, int keep_alive)
 {
-    char *response;
+    // char *response;
 
-    pr_info("requested_url = %s\n", request->request_url);
-    if (request->method != HTTP_GET)
-        response = keep_alive ? HTTP_RESPONSE_501_KEEPALIVE : HTTP_RESPONSE_501;
-    else
-        response = keep_alive ? HTTP_RESPONSE_200_KEEPALIVE_DUMMY
-                              : HTTP_RESPONSE_200_DUMMY;
-    http_server_send(request->socket, response, strlen(response));
+    // pr_info("requested_url = %s\n", request->request_url);
+    // if (request->method != HTTP_GET)
+    //     response = keep_alive ? HTTP_RESPONSE_501_KEEPALIVE :
+    //     HTTP_RESPONSE_501;
+    // else
+    //     response = keep_alive ? HTTP_RESPONSE_200_KEEPALIVE_DUMMY
+    //                           : HTTP_RESPONSE_200_DUMMY;
+    // http_server_send(request->socket, response, strlen(response));
+    // char *response = HTTP_SEND_MESSAGE_DUMMY(DECO_LIN);
+    // http_server_send(request->socket, response, strlen(response));
+    directory_listing(request);
+
     return 0;
 }
 
