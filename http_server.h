@@ -13,6 +13,7 @@ struct http_server_param {
 
 struct khttpd_service {
     bool is_stopped;
+    char *path;
     struct list_head worker;
 };
 
@@ -23,6 +24,8 @@ struct khttpd {
 };
 
 
+
 extern int http_server_daemon(void *arg);
+extern struct khttpd_service daemon;
 
 #endif

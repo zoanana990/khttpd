@@ -10,11 +10,16 @@
 
 #define DEFAULT_PORT 8081
 #define DEFAULT_BACKLOG 100
+#define PATH_LEN 512
 
 static ushort port = DEFAULT_PORT;
 module_param(port, ushort, S_IRUGO);
 static ushort backlog = DEFAULT_BACKLOG;
 module_param(backlog, ushort, S_IRUGO);
+// static char WWWROOT[PATH_LEN] = {0};
+// module_param_string(WWWROOT, WWWROOT, PATH_LEN, 0);
+
+struct khttpd_service daemon = {.is_stopped = false};
 
 static struct socket *listen_socket;
 static struct http_server_param param;
@@ -162,6 +167,7 @@ static int __init khttpd_init(void)
         return err;
     }
     param.listen_socket = listen_socket;
+    // daemon.path = WWWROOT;
 
     khttpd_wq = alloc_workqueue(MODULE_NAME, WQ_UNBOUND, 0);
     http_server = kthread_run(http_server_daemon, &param, KBUILD_MODNAME);
