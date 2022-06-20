@@ -1,5 +1,22 @@
 #include "mime.h"
+
 extern hashtable_t *MIME;
+#ifdef __KERNEL__
+char *mime_strdup(char *str)
+{
+    size_t len;
+    char *ret;
+
+    len = strlen(str);
+    ret = MALLOC(len + 1);
+    if (__builtin_expect(ret != NULL, 1))
+        memcpy(ret, str, len + 1);
+
+    FREE(str);
+
+    return ret;
+}
+#endif
 hashtable_t *mime_init(size_t size)
 {
     hashtable_t *MIME_ = NULL;
@@ -59,7 +76,7 @@ DUP_HTTP_TYPE:
 
 int mime_hash(hashtable_t *hashtable, char *file_extension)
 {
-    unsigned long int value;
+    unsigned long int value = 0x61C88647;
     // PRINT("%ld\n", value);
     size_t n = strlen(file_extension);
 
@@ -234,21 +251,21 @@ void mime_create(size_t size)
     PRINT("%s", "MIME TABLE CREATE SUCCESSFUL\n");
 }
 
-#ifndef __KERNEL__
-int main()
-{
-    mime_create(128);
+// #ifndef __KERNEL__
+// int main()
+// {
+//     mime_create(128);
 
-    PRINT("Insert Sucessful\n");
+//     PRINT("Insert Sucessful\n");
 
-    char *file1 = ".modules.order.cmd";
-    char *file2 = "http_server.c";
+//     char *file1 = ".modules.order.cmd";
+//     char *file2 = "http_server.c";
 
-    // char *request_type = strchr(file1, '.');
-    PRINT("%s\n", get_mime_type(MIME, file1));
-    // PRINT("%s\n", strchr(file2, '.'));
+//     // char *request_type = strchr(file1, '.');
+//     PRINT("%s\n", get_mime_type(MIME, file1));
+//     // PRINT("%s\n", strchr(file2, '.'));
 
-    mime_free(MIME);
-    return 0;
-}
-#endif
+//     mime_free(MIME);
+//     return 0;
+// }
+// #endif

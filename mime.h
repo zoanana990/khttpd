@@ -9,20 +9,6 @@
 #define MALLOC(size) vmalloc(size)
 #define FREE(x) vfree(x)
 #define PRINT printk
-__attributed__(unused) char *mime_strdup(char *str)
-{
-    size_t len;
-    char *ret;
-
-    len = strlen(str);
-    ret = MALLOC(len + 1);
-    if (__builtin_expect(ret != NULL, 1))
-        memcpy(ret, str, len + 1);
-
-    FREE(str);
-
-    return ret;
-}
 #else
 #include <limits.h>
 #include <stdbool.h>
@@ -78,6 +64,6 @@ void mime_insert(hashtable_t *hashtable, char *file_extension, char *http_type);
 int mime_hash(hashtable_t *hashtable, char *file_extension);
 mime_t *mime_alloc(char *file_extension, char *http_type);
 /* Initialize MIME type */
-hashtable_t *MIME = NULL;
+extern hashtable_t *MIME;
 
 #endif
