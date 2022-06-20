@@ -1,81 +1,83 @@
 #ifndef _MIME_H_
 #define _MIME_H_
 
+#ifdef __KERNEL__
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/string.h>
+#include <linux/vmalloc.h>
+#define MALLOC(size) vmalloc(size)
+#define FREE(x) vfree(x)
+#define PRINT printk
+__attributed__(unused) char *mime_strdup(char *str)
+{
+    size_t len;
+    char *ret;
+
+    len = strlen(str);
+    ret = MALLOC(len + 1);
+    if (__builtin_expect(ret != NULL, 1))
+        memcpy(ret, str, len + 1);
+
+    FREE(str);
+
+    return ret;
+}
+#else
+#include <limits.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MALLOC(size) malloc(size)
+#define FREE(ptr) free(ptr)
+#define PRINT printf
+#define mime_strdup strdup
+#endif
+
+/**
+ * A hashtable contain a pointer array which point to mime_t
+ * due to a pointer array, we need a pointer to pointer,
+ * that is **mimetable
+ * +---------+
+ * | *mime_t |
+ * +---------+
+ * | *mime_t |
+ * +---------+
+ * |   ...   |
+ * +---------+
+ *
+ * and in each mime_t, there is
+ * +-----------------+
+ * | *file_extension |
+ * +-----------------+
+ * | *http_type      |
+ * +-----------------+
+ * | *next           |
+ * +-----------------+
+ *
+ * the mime_t * is a linked list
+ */
 typedef struct mime {
     char *file_extension;
     char *http_type;
-    mime_t *next;
+    struct mime *next;
 } mime_t;
 
-/* Initialize MIME type*/
-mime_t MIME[] = {{".ez", "application/andrew-inset"},
-                 {".aw", "application/applixware"},
-                 {".atom", "application/atom+xml"},
-                 {".atomcat", "application/atomcat+xml"},
-                 {".atomsvc", "application/atomsvc+xml"},
-                 {".ccxml", "application/ccxml+xml"},
-                 {".cu", "application/cu-seeme"},
-                 {".davmount", "application/davmount+xml"},
-                 {".ecma", "application/ecmascript"},
-                 {".emma", "application/emma+xml"},
-                 {".epub", "application/epub+zip"},
-                 {".pfr", "application/font-tdpfr"},
-                 {".gz", "application/gzip"},
-                 {".tgz", "application/gzip"},
-                 {".stk", "application/hyperstudio"},
-                 {".jar", "application/java-archive"},
-                 {".ser", "application/java-serialized-object"},
-                 {".class", "application/java-vm"},
-                 {".json", "application/json"},
-                 {".lostxml", "application/lost+xml"},
-                 {".hqx", "application/mac-binhex40"},
-                 {".cpt", "application/mac-compactpro"},
-                 {".mrc", "application/marc"},
-                 {".ma", "application/mathematica"},
-                 {".mb", "application/mathematica"},
-                 {".nb", "application/mathematica"},
-                 {".mathml", "application/mathml+xml"},
-                 {".mml", "application/mathml+xml"},
-                 {".mbox", "application/mbox"},
-                 {".mscml", "application/mediaservercontrol+xml"},
-                 {".mp4s", "application/mp4"},
-                 {".doc", "application/msword"},
-                 {".dot", "application/msword"},
-                 {".mxf", "application/mxf"},
-                 {".a", "application/octet-stream"},
-                 {".bin", "application/octet-stream"},
-                 {".bpk", "application/octet-stream"},
-                 {".o", "application/octet-stream"},
-                 {".obj", "application/octet-stream"},
-                 {".pkg", "application/octet-stream"},
-                 {".so", "application/octet-stream"},
-                 {".iso", "application/octet-stream"},
-                 {".dmg", "application/octet-stream"},
-                 {".elc", "application/octet-stream"},
-                 {".oda", "application/oda"},
-                 {".opf", "application/oebps-package+xml"},
-                 {".ogx", "application/ogg"},
-                 {".onepkg", "application/onenote"},
-                 {".xer", "application/patch-ops-error+xml"},
-                 {".pdf", "application/pdf"},
-                 {".pgp", "application/pgp-encrypted"},
-                 {".pki", "application/pkixcmp"},
-                 {".xml", "application/xml"},
-                 {".tar", "application/x-tar"},
-                 {".sh", "application/x-shellscript"},
-                 {".pyc", "application/x-python-code"},
-                 {".rpa", "application/x-redhat-package-manager"},
-                 {".bmp", "image/bmp"},
-                 {".cgm", "image/cgm"},
-                 {".gif", "image/gif"},
-                 {".jpe", "image/jpeg"},
-                 {".jpeg", "image/jpeg"},
-                 {".jpg", "image/jpeg"},
-                 {".pjpg", "image/jpeg"},
-                 {".png", "image/png"},
-                 {".ras", "image/x-cmu-raster"},
-                 {".c", "text/x-c"},
-                 {".cc", "text/x-c"},
-                 {".h", "text/x-c"},
-                 {".cpp", "text/x-c"}}
+typedef struct hashtable_s {
+    size_t size;
+    mime_t **mimetable;
+} hashtable_t;
+
+hashtable_t *mime_init(size_t size);
+void mime_create(size_t size);
+void mime_free(hashtable_t *hashtable);
+char *get_mime_type(hashtable_t *hashtable, char *file_extension);
+void mime_insert(hashtable_t *hashtable, char *file_extension, char *http_type);
+int mime_hash(hashtable_t *hashtable, char *file_extension);
+mime_t *mime_alloc(char *file_extension, char *http_type);
+/* Initialize MIME type */
+hashtable_t *MIME = NULL;
+
 #endif
